@@ -160,5 +160,5 @@ int sys_copy(string oldPath, int type, string newPath);//复制；         //目
 int sys_share(FCB* shared, FCB* sharing);
 int sys_write_disk(string diskpath);
 int sys_read_disk(string diskpath);
-
+int sys_setaccess(string path,string user,char x);
 #endif //JIANG_LIBRARY_H

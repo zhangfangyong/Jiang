@@ -1,7 +1,10 @@
+
+//#include <stringstream>
+#include "library.h"
 #include <iostream>
 #include <cstring>
 #include<fstream>
-#include "library.h"
+
 //#include <stringstream>
 //#include "FAT.h"
 
@@ -42,12 +45,13 @@ void sys_initDisk() {
     _users->_contentLength=1;
     _users->_blockID = _systemUsedBlock;
     _root = &(_users->_content[0]);//????????
+
     current_user=_root;
     current_usernum=0;
     strcpy(_root->_name, "root");//type size榛樿
     ////_root->_block=;????????????????????????
     _current = _root;
-    current_path = "//";
+    current_path = "/root";
 /*
     //鎶婄┖鐨凢CB閾炬帴璧锋潵锛?
     //char* _FCB_StartAllocation = _virtualDiskAddr + _bitMapCount * _blockSize + 64;    //64鏄痳oot鐨凢CB锛?
@@ -228,6 +232,7 @@ FCB* getblankFCB(FCB* parentDir) {///////////////////////////////淇敼瀹屾
     }
     destination_fcbblock->_contentLength+=1;///!!!!
     fcb->_access[current_usernum]='4';////创建者最高其权限
+    parentDir->_size+=1;
     return fcb;
 }
 
@@ -269,6 +274,7 @@ void releaseBLOCK(int block,int type) {//閲婃斁鍐呭瓨绌洪棿锛屼慨鏀
     _emptyBLOCK_Count++;
     //閲婃斁鍚庨潰鐨勫潡
     int next_block=_fat->fats[block];
+    _fat->fats[block] = -1;
     while (next_block != -1) {
         next_block = _fat->fats[block];
         _fat->fats[block] = -1;
@@ -387,9 +393,13 @@ FCB* return_DIR_FCB(string DIR[], int count, bool isAbsolutePath)
 }*/
 FCB* return_FCB(string DIR[], int count, int type,FCB* &parent,int &B,int &F,bool isAbsolutePath){
     FCB* currentDir;
-    currentDir=_current;
+    //currentDir=_current;
     if(isAbsolutePath){
-        int tmp_c=0;
+        int u=0;
+        FCBBLOCK* b=num2FCBBlock(128);
+        while(DIR[0]!=b->_content[u]._name) u++;
+        currentDir=&(b->_content[u]);
+        int tmp_c=1;
         while(tmp_c<count-1) {
             currentDir=returnSonFCB(currentDir,DIR[tmp_c],1,B,F);
             if(currentDir==NULL) return NULL;
@@ -745,8 +755,8 @@ void add_dirOrFile(FCB* adding, FCB* destination) {//destination 锛屽鍒跺
         //needAddBLOCK = adding->_size / _fcbsSize;
         if(needAddBLOCK==0){
         }else{
-            int contentFirstBlockNum;
-            contentFirstBlockNum = getEmptyBLOCKNum(needAddBLOCK);
+            //int contentFirstBlockNum;
+            //contentFirstBlockNum = getEmptyBLOCKNum(needAddBLOCK);
             destination->_block = contentFirstBlockNum;
             FCBBLOCK* contentFirstAdrr =initFCBBlock(contentFirstBlockNum);
 
@@ -839,7 +849,7 @@ StringList* sys_dir(string dirPath) {
     if (dirPath != ""){
         ////////////////////////////////////////////////////
         if (dirPath[0] != '\\') {
-            dir_content->content = "路径格式错误！\n";
+            dir_content->content = "Path format error!\n";
             dir_content->next = NULL;
             return dir_content;
         }
@@ -850,20 +860,20 @@ StringList* sys_dir(string dirPath) {
 
     if (tmp != NULL) {//瑕佹煡鐪嬬殑鐩綍瀛樺湪锛?
         if (tmp->_access[current_usernum] == '0') {
-            dir_content->content += "当前目录您无权访问\n";
+            dir_content->content += "You are not authorized to access the current directory\n";
             dir_content->next = NULL;
             return dir_content;
         }else {
             tmp_dirContent = dir_content;//tmp_dirContent锛宒ir_content鐨勪复鏃跺壇鏈紝鐢变簬鏄寚閽堝唴瀹瑰啓鍏ョ殑鏄悓涓€鍦板潃
             if (tmp->_block == -1) {
-                dir_content->content += "当前目录为空\n";
+                dir_content->content += "The current directory is empty\n";
                 dir_content->next = NULL;
                 return dir_content;
             } else {
                 int fcbblocknum = tmp->_block;
                 FCBBLOCK *fcbblock = num2FCBBlock(fcbblocknum);
                 if (fcbblock->_contentLength == 0) {
-                    dir_content->content += "当前目录为空\n";
+                    dir_content->content += "The current directory is empty\n";
                     dir_content->next = NULL;
                     return dir_content;
                 }
@@ -898,14 +908,14 @@ StringList* sys_dir(string dirPath) {
     {
         if (parentDir==NULL)
         {
-            dir_content->content = "该目录的父目录不存在！\n";
+            dir_content->content = "The parent directory for this directory does not exist！\n";
             dir_content->next = NULL;
             return dir_content;
         }
         else
         {
             //璇存槑鎯宠鍒犻櫎鐨勭洰褰曚笉瀛樺湪锛?
-            dir_content->content = "该目录不存在！\n";
+            dir_content->content = "The directory does not exist！\n";
             dir_content->next = NULL;
             return dir_content;
         }
@@ -1470,7 +1480,7 @@ int sys_share(string oldPath, int type, string newPath) {
                     //numFCB = 0; numBLOCK = 0;
 
                     //璋冪敤璁＄畻绯荤粺璧勬簮锛?
-                        //璇存槑绯荤粺璧勬簮澶熺敤锛涘彲浠ュ鍒讹紱
+                    //璇存槑绯荤粺璧勬簮澶熺敤锛涘彲浠ュ鍒讹紱
                     int s=share_dirOrFile(share_FCB, DestinationDir);
                     if(s==1) return 1;          //鎻愮ず寮€鍙戣€咃紝 澶嶅埗绮樿创鎴愬姛锛?
                     else return 0;
@@ -1496,22 +1506,19 @@ int sys_share(string oldPath, int type, string newPath) {
 
 
 
-
-int sys_setaccess(string path,char x){
+int sys_setaccess(string path,string user,char x){
     string name1;
     int type,B,F;
     FCB *p;
     FCB* fcb=sys_returnFCB(path,name1,0,p,B,F);
+    int usernum=0;
+    while(_users->_content[usernum]._name!=user) usernum++;
     if(fcb->_access[current_usernum]=='4') {
-        int i=0;
-        while(i< _maxUsers){
-            if(i!=0||i!=current_usernum)
-                fcb->_access[current_usernum]=x;
-            i++;
-        }
+        fcb->_access[usernum]=x;
         return 1;
     }else return 0;
 }
+
 /*
 int main() {
     sys_initDisk();
